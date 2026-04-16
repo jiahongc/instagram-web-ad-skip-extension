@@ -1,0 +1,13 @@
+.DS_Store
+node_modules/
+*.zip
+*.crx
+*.pem
+__pycache__/
+*.pyc
+.venv/
+venv/
+.vscode/
+.idea/
+docs/superpowers/
+docs/brainstorms/
