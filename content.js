@@ -140,7 +140,7 @@
   function skipReel(adEl) {
     const scroller = findReelScroller();
     if (scroller) {
-      scroller.scrollBy({ top: scroller.clientHeight, behavior: "smooth" });
+      scroller.scrollBy({ top: scroller.clientHeight, behavior: "instant" });
       return true;
     }
     const container =

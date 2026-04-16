@@ -57,7 +57,7 @@ manifest.json      # MV3 manifest, host perm on www.instagram.com only
 inject.js          # MAIN-world, patches fetch/JSON for ad filtering
 content.js         # ISOLATED-world, DOM fallback + skip actions
 popup.html / .js   # on/off toggle (chrome.storage.sync)
-icons/             # 16/48/128 PNGs
+icons/             # 16/48/128 PNGs + source.png master
 scripts/           # build-time helpers (icon generator)
 ```
 
@@ -81,9 +81,12 @@ No telemetry, no remote config, no analytics.
 ## Development
 
 ```bash
-# regenerate icons (requires Python 3 + Pillow)
+# regenerate icons from icons/source.png (requires Python 3 + Pillow)
 python3 scripts/make_icons.py
 ```
+
+Icon master is `icons/source.png`. The script auto-crops it to a square and
+exports 16/48/128 PNGs for the extension.
 
 There is no build step. Edit the JS files and reload the extension at
 `chrome://extensions`.
