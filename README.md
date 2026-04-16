@@ -65,10 +65,17 @@ scripts/           # build-time helpers (icon generator)
 
 Minimal. Only:
 
-- `storage` — to persist the on/off toggle.
-- `host_permissions` for `https://www.instagram.com/*` only.
+- `storage` — persist the on/off toggle via `chrome.storage.sync`.
+- `host_permissions` for `https://www.instagram.com/*` only — inject the
+  ad-filtering content scripts.
 
-No telemetry, no remote config, no analytics.
+No telemetry, no remote config, no analytics. See [PRIVACY.md](PRIVACY.md).
+
+## Chrome Web Store
+
+Full listing copy (fields, descriptions, permission justifications) lives in
+[STORE_LISTING.md](STORE_LISTING.md). Upload package:
+`instagram-web-ad-skip-v0.2.0.zip`.
 
 ## Known limitations
 
