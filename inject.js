@@ -8,6 +8,11 @@
   let enabled = true;
   let blocked = 0;
 
+  // Fast pre-check: only scrub payloads that mention an ad-related key.
+  // Avoids walking every JSON.parse result IG makes (routing, settings, etc).
+  const AD_HINT_RE =
+    /"(is_ad|is_sponsored|product_type|ad_id|sponsor_tags|ad_media_items|injected_items)"/;
+
   window.addEventListener("message", (e) => {
     if (e.source !== window) return;
     const d = e.data;
@@ -66,9 +71,17 @@
     return obj;
   }
 
+  // Heuristic: only scrub if the source text mentions an ad-related key.
+  function shouldScrubText(text) {
+    if (typeof text !== "string" || text.length < 64) return false;
+    return AD_HINT_RE.test(text);
+  }
+
   const origParse = JSON.parse;
   JSON.parse = function (text, reviver) {
     const result = origParse.call(this, text, reviver);
+    if (!enabled) return result;
+    if (!shouldScrubText(text)) return result;
     try {
       scrub(result, 0);
     } catch (_) {}
@@ -78,6 +91,7 @@
   const origResJson = Response.prototype.json;
   Response.prototype.json = function () {
     return origResJson.call(this).then((data) => {
+      if (!enabled || !data || typeof data !== "object") return data;
       try {
         scrub(data, 0);
       } catch (_) {}
@@ -88,9 +102,10 @@
   const origText = Response.prototype.text;
   Response.prototype.text = function () {
     return origText.call(this).then((txt) => {
-      if (!txt || typeof txt !== "string") return txt;
-      const trimmed = txt.trim();
-      if (!trimmed.startsWith("{") && !trimmed.startsWith("[")) return txt;
+      if (!enabled || !txt || typeof txt !== "string") return txt;
+      const trimmed = txt.length < 200 ? txt.trim() : txt;
+      if (trimmed[0] !== "{" && trimmed[0] !== "[") return txt;
+      if (!shouldScrubText(txt)) return txt;
       try {
         const parsed = origParse.call(JSON, txt);
         scrub(parsed, 0);
