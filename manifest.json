@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Instagram Web Ad Skip",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Auto-skips Sponsored reels, stories, and feed ads on Instagram.",
   "permissions": ["storage"],
   "host_permissions": ["https://www.instagram.com/*"],

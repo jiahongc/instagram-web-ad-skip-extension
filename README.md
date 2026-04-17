@@ -50,6 +50,19 @@ Two layers, in order of reliability:
 
 A toolbar button with a popup lets you toggle the extension on/off.
 
+## Update
+
+To pull the latest version into a previously cloned checkout:
+
+```bash
+bash scripts/update.sh
+```
+
+The script `git pull`s, prints the manifest version, and opens
+`chrome://extensions` so you can hit the reload icon (or the page-level
+**Update** button with Developer mode on). Then refresh any open
+Instagram tabs.
+
 ## File layout
 
 ```
@@ -58,7 +71,7 @@ inject.js          # MAIN-world, patches fetch/JSON for ad filtering
 content.js         # ISOLATED-world, DOM fallback + skip actions
 popup.html / .js   # on/off toggle (chrome.storage.sync)
 icons/             # 16/48/128 PNGs + source.png master
-scripts/           # build-time helpers (icon generator)
+scripts/           # update.sh + icon generator
 ```
 
 ## Permissions
