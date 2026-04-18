@@ -3,7 +3,7 @@
 Canonical copy for Chrome Web Store developer dashboard form fields.
 Paste values from here into the corresponding field.
 
-Upload package: `instagram-web-ad-skip-v0.2.0.zip`
+Upload package: `instagram-web-ad-skip-v0.3.0.zip`
 
 ---
 
@@ -30,9 +30,13 @@ How it works
 • Ad Break aware: Instagram's server-enforced "Ad break" countdown is unskippable. The extension detects it and stands down instead of fighting.
 • Humanized cadence: actions use a randomized 600–1400 ms cooldown to avoid bot-like patterns.
 
+Stats
+• The toolbar popup shows how many ads were skipped today, broken down by Reels, Stories, Feed, and network-blocked. Plus a 7-day total.
+• All counters live on your device. Clear them any time with the Reset button.
+
 Privacy
 • No telemetry. No remote config. No analytics.
-• Only permission: storage (to remember your on/off toggle).
+• Only permission: storage (for the on/off toggle and local stat counters).
 • Only host: https://www.instagram.com/*
 
 Toggle on/off anytime via the toolbar popup.

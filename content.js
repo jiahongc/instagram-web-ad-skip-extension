@@ -5,6 +5,7 @@
   const MAX_COOLDOWN_MS = 900;
   const DEBOUNCE_MS = 180;
   const USER_INPUT_GRACE_MS = 400;
+  const STATS_RETENTION_DAYS = 30;
 
   const SPONSORED_RE = /^(Ad|Ads|Advertisement|Sponsored|Promoted|Paid partnership(?: with .+)?|Patrocinado|Publicidad|Anuncio|Publicité|Annonce|Werbung|Gesponsert|Sponsorizzato|Pubblicità|Реклама|Reklama|广告|廣告|贊助|スポンサー|広告|광고|Sponsorlu|Reklam|إعلان|ממומן)$/i;
   const AD_BREAK_RE = /^(Ad break|Ad starts in|Your next video|Your ad break|Next video in)/i;
@@ -15,6 +16,52 @@
   let scanTimer = 0;
   let cachedScroller = null;
   let cachedScrollerHref = "";
+
+  // Stats batching (write-through to chrome.storage.local every ~800ms).
+  const pendingStats = { reel: 0, story: 0, feed: 0, network: 0 };
+  let statsFlushTimer = 0;
+
+  function todayKey() {
+    const d = new Date();
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${y}-${m}-${day}`;
+  }
+
+  function pruneStats(stats) {
+    const keys = Object.keys(stats || {}).sort();
+    if (keys.length <= STATS_RETENTION_DAYS) return stats;
+    const drop = keys.length - STATS_RETENTION_DAYS;
+    for (let i = 0; i < drop; i++) delete stats[keys[i]];
+    return stats;
+  }
+
+  function flushStats() {
+    statsFlushTimer = 0;
+    const hasDelta = Object.values(pendingStats).some((v) => v > 0);
+    if (!hasDelta) return;
+    if (!chrome?.storage?.local) return;
+    const key = todayKey();
+    const delta = { ...pendingStats };
+    for (const k of Object.keys(pendingStats)) pendingStats[k] = 0;
+    chrome.storage.local.get({ stats: {} }, ({ stats }) => {
+      stats = stats || {};
+      const bucket = stats[key] || { reel: 0, story: 0, feed: 0, network: 0 };
+      for (const k of Object.keys(delta)) {
+        bucket[k] = (bucket[k] || 0) + delta[k];
+      }
+      stats[key] = bucket;
+      pruneStats(stats);
+      chrome.storage.local.set({ stats });
+    });
+  }
+
+  function bumpStat(kind, n) {
+    if (!kind || !(kind in pendingStats)) return;
+    pendingStats[kind] += n || 1;
+    if (!statsFlushTimer) statsFlushTimer = setTimeout(flushStats, 800);
+  }
 
   function randomCooldown() {
     return MIN_COOLDOWN_MS + Math.random() * (MAX_COOLDOWN_MS - MIN_COOLDOWN_MS);
@@ -37,8 +84,18 @@
     });
   }
 
+  // Receive network-layer block counts from inject.js and attribute them to
+  // whichever IG surface the user is currently viewing.
+  window.addEventListener("message", (e) => {
+    if (e.source !== window) return;
+    const d = e.data;
+    if (!d || d.source !== "igwas-inject") return;
+    if (d.type === "blocked" && typeof d.count === "number") {
+      bumpStat("network", d.count);
+    }
+  });
+
   // Track user input so the extension yields when the user is actively driving.
-  // Use capture-phase + passive so we never delay the event itself.
   const markInput = () => { lastUserInputAt = Date.now(); };
   const inputOpts = { capture: true, passive: true };
   for (const ev of ["keydown", "wheel", "touchstart", "pointerdown", "click"]) {
@@ -51,6 +108,13 @@
   const isFeed = () =>
     path() === "/" || path().startsWith("/explore") || path().startsWith("/p/");
 
+  function currentSurface() {
+    if (isStory()) return "story";
+    if (isReel()) return "reel";
+    if (isFeed()) return "feed";
+    return "feed";
+  }
+
   function isVisible(el) {
     if (!el?.getBoundingClientRect) return false;
     const r = el.getBoundingClientRect();
@@ -62,7 +126,6 @@
   }
 
   function activeSurface() {
-    // Limits expensive querySelectorAll scope to the relevant container.
     if (isStory()) {
       return (
         document.querySelector('section[role="dialog"]') ||
@@ -176,7 +239,6 @@
   }
 
   function skipReel(adEl) {
-    // Prefer aligning to the next reel article so the snap matches IG's own paging.
     const container =
       adEl?.closest("article") ||
       adEl?.closest('div[role="presentation"]') ||
@@ -206,7 +268,6 @@
     if (!enabled) return;
     const now = Date.now();
     if (now - lastSkipAt < randomCooldown()) return;
-    // Yield to the user: if they just interacted, let their input win.
     if (now - lastUserInputAt < USER_INPUT_GRACE_MS) {
       scheduleScan();
       return;
@@ -218,11 +279,15 @@
     if (!el) return;
 
     let ok = false;
+    let kind = currentSurface();
     if (isStory()) ok = skipStory();
     else if (isReel()) ok = skipReel(el);
     else if (isFeed()) ok = skipFeed(el);
     else ok = skipFeed(el) || skipReel(el) || skipStory();
-    if (ok) lastSkipAt = Date.now();
+    if (ok) {
+      lastSkipAt = Date.now();
+      bumpStat(kind, 1);
+    }
   }
 
   function scheduleScan() {
@@ -241,7 +306,21 @@
     bootObserver();
   }
 
-  // SPA navigation invalidates the scroller cache and resets cooldown.
+  // Flush any pending stats before the tab goes away.
+  window.addEventListener("pagehide", flushStats);
+  window.addEventListener("beforeunload", flushStats);
+
+  // Popup asks for a flush when it opens so the user sees the latest counts.
+  if (chrome?.runtime?.onMessage) {
+    chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
+      if (msg?.type === "igwas-flush-stats") {
+        flushStats();
+        sendResponse({ ok: true });
+      }
+      return true;
+    });
+  }
+
   let lastHref = location.href;
   setInterval(() => {
     if (location.href !== lastHref) {

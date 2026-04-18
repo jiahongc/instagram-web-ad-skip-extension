@@ -84,11 +84,19 @@ Minimal. Only:
 
 No telemetry, no remote config, no analytics. See [PRIVACY.md](PRIVACY.md).
 
+## Stats
+
+Click the toolbar icon to see how many ads were skipped today, split by
+**Reels**, **Stories**, **Feed**, and **network-blocked** (ads filtered out
+of Instagram's own GraphQL responses before they ever render). Also shows a
+7-day rolling total. Counts live locally on your device and can be cleared
+from the popup.
+
 ## Chrome Web Store
 
 Full listing copy (fields, descriptions, permission justifications) lives in
 [STORE_LISTING.md](STORE_LISTING.md). Upload package:
-`instagram-web-ad-skip-v0.2.0.zip`.
+`instagram-web-ad-skip-v0.3.0.zip`.
 
 ## Known limitations
 

@@ -6,7 +6,25 @@
   window[FLAG] = true;
 
   let enabled = true;
-  let blocked = 0;
+
+  // Batched block counter — flushed to the content script on a 500ms tick.
+  let pendingBlocked = 0;
+  let flushTimer = 0;
+
+  function flushBlocked() {
+    flushTimer = 0;
+    if (pendingBlocked <= 0) return;
+    window.postMessage(
+      { source: "igwas-inject", type: "blocked", count: pendingBlocked },
+      "*"
+    );
+    pendingBlocked = 0;
+  }
+
+  function noteBlocked(n) {
+    pendingBlocked += n;
+    if (!flushTimer) flushTimer = setTimeout(flushBlocked, 500);
+  }
 
   // Fast pre-check: only scrub payloads that mention an ad-related key.
   // Avoids walking every JSON.parse result IG makes (routing, settings, etc).
@@ -43,7 +61,7 @@
         const probe = it.node || it.media || it.story || it;
         if (looksLikeAd(probe)) {
           obj.splice(i, 1);
-          blocked++;
+          noteBlocked(1);
           continue;
         }
         scrub(it, depth + 1);
@@ -52,7 +70,7 @@
     }
 
     if (Array.isArray(obj.ad_media_items) && obj.ad_media_items.length > 0) {
-      blocked += obj.ad_media_items.length;
+      noteBlocked(obj.ad_media_items.length);
       obj.ad_media_items = [];
     }
     if (Array.isArray(obj.injected_items) && obj.injected_items.length > 0) {
@@ -61,7 +79,7 @@
         const probe = it?.node || it?.media || it;
         return !looksLikeAd(probe);
       });
-      blocked += before - obj.injected_items.length;
+      noteBlocked(before - obj.injected_items.length);
     }
 
     for (const k of Object.keys(obj)) {

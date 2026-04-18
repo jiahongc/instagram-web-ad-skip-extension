@@ -31,13 +31,30 @@ operated by the developer or any third party.
 
 ## Data the extension stores
 
-One key in `chrome.storage.sync`:
+In `chrome.storage.sync`:
 
 | Key       | Value               | Purpose                  |
 |-----------|---------------------|--------------------------|
 | `enabled` | `true` or `false`   | Remember on/off toggle   |
 
-That's it. No identifiers, no timestamps, no usage counters.
+In `chrome.storage.local` (device-only, not synced):
+
+| Key     | Value                                                                 | Purpose                               |
+|---------|-----------------------------------------------------------------------|---------------------------------------|
+| `stats` | Object keyed by date (`YYYY-MM-DD`) of integer counters per surface   | Daily ad-skip counts shown in popup   |
+
+Example:
+```json
+{
+  "stats": {
+    "2026-04-18": { "reel": 3, "story": 1, "feed": 0, "network": 12 }
+  }
+}
+```
+
+Counters are retained for 30 days and never leave the device. No timestamps,
+no identifiers, no URLs, no content snippets are recorded. You can clear all
+counters at any time via the **Reset stats** button in the popup.
 
 ## Permissions
 
