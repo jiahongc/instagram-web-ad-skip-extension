@@ -7,17 +7,13 @@ Chrome (MV3) extension that automatically skips Sponsored / Ad content on
   <img src="icons/icon128.png" width="96" alt="Instagram Web Ad Skip icon" />
 </p>
 
-## Why
+The extension combines response filtering with a DOM fallback to hide or advance past detected ad content. Instagram can change its response formats and page structure, so skipping is best-effort.
 
-Existing Chrome extensions in this space either (a) nuke entire surfaces
-(Reels, Stories) losing organic content, or (b) scrape for the word
-"Sponsored" and race the render. This extension is surgical: it filters
-ad nodes out of Instagram's GraphQL responses **before** React renders,
-and uses a durable structural DOM selector as a fallback.
+[Install](#install-developer-mode) · [How it works](#how-it-works) · [Permissions](#permissions) · [Development](#development)
 
 ## How it works
 
-Two layers, in order of reliability:
+Two filtering layers with additional guards:
 
 1. **Network layer (primary).** A `MAIN`-world content script injected at
    `document_start` monkey-patches `JSON.parse`, `Response.prototype.json`,
@@ -37,12 +33,11 @@ Two layers, in order of reliability:
 3. **Ad Break guard.** Instagram's server-enforced "Ad break" countdown
    (3–5s) is unskippable by design. The extension detects it and does
    nothing instead of fighting it.
-4. **Humanized cadence.** Actions are throttled with a randomized
-   600–1400ms cooldown to avoid sub-200ms bot-like skip patterns.
+4. **Action cooldown.** A randomized 600–1400ms cooldown limits repeated skip actions.
 
 ## Install (developer mode)
 
-1. Clone this repo.
+1. Clone this repo: `git clone https://github.com/jiahongc/instagram-web-ad-skip-extension.git`.
 2. Open `chrome://extensions`.
 3. Enable **Developer mode** (top right).
 4. Click **Load unpacked** → select this folder.
@@ -95,16 +90,13 @@ from the popup.
 ## Chrome Web Store
 
 Full listing copy (fields, descriptions, permission justifications) lives in
-[STORE_LISTING.md](STORE_LISTING.md). Upload package:
-`instagram-web-ad-skip-v0.3.0.zip`.
+[STORE_LISTING.md](STORE_LISTING.md). Package the current source with `manifest.json` at the archive root when preparing a store submission.
 
 ## Known limitations
 
 - Server-enforced "Ad break" countdowns cannot be skipped on the client.
-- Instagram may occasionally roll out A/B UI variants where the label is
-  rendered as an image — the network filter still catches these.
-- Account-level shadowbans for rapid skipping have not been reliably
-  reported, but cadence is humanized anyway.
+- Instagram experiments can change labels, response data, or navigation controls and break either filtering layer.
+- The cooldown does not guarantee how Instagram will classify or respond to automated actions.
 
 ## Development
 
